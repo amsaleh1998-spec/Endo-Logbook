@@ -821,8 +821,14 @@ function fillDocument(doc) {
   // Case No / Date
   const cd = F.p("Case No");
   [...cd.children].filter(c => c.localName === "r").forEach(r => r.remove());
+  // One line: Case No on the left, Date against the right margin.
+  let ppr = [...cd.children].find(c => c.localName === "pPr");
+  if (!ppr) { ppr = F.el("pPr"); cd.insertBefore(ppr, cd.firstChild); }
+  const tabs = F.el("tabs"), tab = F.el("tab");
+  tab.setAttributeNS(WNS, "w:val", "right"); tab.setAttributeNS(WNS, "w:pos", "9900");
+  tabs.append(tab); ppr.insertBefore(tabs, ppr.firstChild);
   cd.append(F.run("Case No: "), F.run(txt("caseNo") ? ` ${txt("caseNo")} ` : "            ", { u: true }));
-  const br = F.el("r"); br.append(F.el("br")); cd.append(br);
+  const tb = F.el("r"); tb.append(F.el("tab")); cd.append(tb);
   cd.append(F.run("Date: "), F.run(S.date ? ` ${fmtDate(S.date)} ` : "      /      /      ", { u: true }));
   if (txt("tooth")) F.blanks(F.p("Tooth:"), [txt("tooth")]);
 
