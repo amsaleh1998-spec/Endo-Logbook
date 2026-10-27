@@ -301,7 +301,7 @@ const STEPS = [
       { name: "From my selections", dynamic: () => finalDiagnosis(), empty: "Select a pulpal and a periradicular diagnosis first." } ] } ] },
 
   { key: "plan", num: "7", title: "Treatment Plan", fields: [
-    { t: "single", id: "txPlan", label: "Treatment", vertical: true, options: ["Primary root canal treatment", "Endodontic retreatment"] },
+    { t: "single", id: "txPlan", label: "Treatment", vertical: true, options: ["Primary root canal treatment", "Endodontic retreatment", "Primary root canal treatment - vital pulp therapy"] },
     { t: "textarea", id: "txAlternatives", label: "Treatment alternatives" },
     { t: "toggle", id: "consent", label: "Patient consent obtained" },
     { t: "preset", id: "insists", label: "Specify if the patient insists on retaining the tooth despite an unfavorable prognosis", presets: X_PRESET } ] },
@@ -333,7 +333,7 @@ const STEPS = [
 
   { key: "postop", num: "10", title: "Postoperative Instructions", fields: [
     { t: "preset", id: "painMgmt", label: "Pain management", presets: [
-      { name: "Paracetamol (patient on NSAIDs)", text: "Paracetamol pain medication was prescribed as the patient is already under heavy AINS for a shoulder incident." } ] },
+      { name: "Paracetamol 500 mg, up to 1 week", text: "Paracetamol 500mg was prescribed after treatment in case of sensitivity to touch or pain on chewing up to 1 week after treatment." } ] },
     { t: "textarea", id: "followSchedule", label: "Postoperative follow-up schedule" } ] },
 
   { key: "followup", num: "11", title: "Follow-up and Outcomes", fields: [
