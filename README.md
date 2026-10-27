@@ -9,10 +9,10 @@ A step-by-step web form that fills the Saint Joseph University endodontic clinic
 - One logbook section per screen, with Back / Next and a section menu.
 - Dental chart (FDI numbering) to pick the tooth.
 - File number checked against the `xx/xxxxxx` format.
-- Preset answers for common entries (medical history, anesthesia, isolation with clamp number, irrigation with NaOCl %, obturation, sealer, pain management…), or write your own.
-- Final diagnosis built from the pulpal and periradicular selections.
-- Fills the original logbook template: chosen boxes become ☒, answers replace the writing lines, and empty fields keep their blank lines. Clinical Case Documentation and the Evaluation Grid stay blank.
-- Answers are saved only in your own browser. Nothing is uploaded.
+- Final diagnosis filled in from the pulpal and periradicular selections (editable).
+- Clinical Case Documentation: choose a photo for each radiograph (preoperative, working length, master cone, postoperative, follow-up); each one goes into its box in the Word table.
+- Fills the original logbook template: chosen boxes become ☒, answers replace the writing lines, and empty fields keep their blank lines. The Evaluation Grid stays blank.
+- Answers and photos are saved only in your own browser. Nothing is uploaded.
 
 ## Files
 
