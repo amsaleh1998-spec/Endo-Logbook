@@ -277,7 +277,7 @@ const STEPS = [
 
   { key: "periradicular", num: "6", title: "Periradicular Diagnosis", intro: "AAE 2009 terminology.", fields: [
     { t: "single", id: "periradicular", label: "Periradicular diagnosis", vertical: true, options: ["Normal apical tissues", "Symptomatic apical periodontitis", "Asymptomatic apical periodontitis", "Acute apical abscess", "Chronic apical abscess", "Condensing osteitis"] },
-    { t: "textarea", id: "finalDx", label: "Final diagnosis (pulpal + periradicular)" } ] },
+    { t: "textarea", id: "finalDx", label: "Final diagnosis (pulpal + periradicular)", hint: "Filled in from your pulpal and periradicular diagnoses. You can edit it." } ] },
 
   { key: "plan", num: "7", title: "Treatment Plan", fields: [
     { t: "single", id: "txPlan", label: "Treatment", vertical: true, options: ["Primary root canal treatment", "Endodontic retreatment", "Primary root canal treatment - vital pulp therapy"] },
@@ -335,6 +335,20 @@ function save() {
 }
 
 const txt = id => String(S[id] ?? "").trim();
+
+/* Final diagnosis follows the two diagnosis choices until the user writes their own wording. */
+function finalDiagnosis() {
+  const p = S.pulpal, r = S.periradicular;
+  if (!p || !r) return "";
+  const pulpWords = { "Previously treated": "previously treated pulp" };
+  const s = (pulpWords[p] || p.toLowerCase()) + " + " + r.toLowerCase();
+  return s[0].toUpperCase() + s.slice(1);
+}
+function syncFinalDx() {
+  const auto = finalDiagnosis();
+  if (!txt("finalDx") || S.finalDx === S.finalDxAuto) S.finalDx = auto;
+  S.finalDxAuto = auto;
+}
 const validFileNo = v => /^\d{2}\/\d{6}$/.test(v);
 
 /* ---------------- DOM helpers ---------------- */
@@ -389,7 +403,7 @@ function textArea(f) {
   const t = h("textarea", { id, rows: 3, oninput: e => { S[f.id] = e.target.value; save(); autosize(e.target); } });
   t.value = S[f.id] || "";
   requestAnimationFrame(() => autosize(t));
-  return h("div", { class: "field" }, [h("label", { class: "label", for: id }, f.label), t]);
+  return h("div", { class: "field" }, [h("label", { class: "label", for: id }, f.label), t, f.hint && h("div", { class: "hint" }, f.hint)]);
 }
 function chip(label, on, onclick) {
   return h("button", { type: "button", class: "chip" + (on ? " on" : ""), "aria-pressed": on ? "true" : "false", onclick }, [h("span", { class: "box", "aria-hidden": "true" }), label]);
@@ -524,6 +538,7 @@ function stepStatus(step) {
 /* ---------------- Screens ---------------- */
 const main = document.getElementById("main");
 function renderStep(scrollTop) {
+  syncFinalDx(); save();
   const step = STEPS[S.step];
   const y = window.scrollY;
   main.replaceChildren();
@@ -830,6 +845,7 @@ async function buildDocx() {
   const xml = await zip.file("word/document.xml").async("string");
   const doc = new DOMParser().parseFromString(xml, "application/xml");
   if (doc.getElementsByTagName("parsererror").length) throw new Error("The logbook template could not be read.");
+  syncFinalDx();
   fillDocument(doc);
   let out = new XMLSerializer().serializeToString(doc);
   if (!out.startsWith("<?xml")) out = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n' + out;
