@@ -102,23 +102,7 @@ textarea { resize: vertical; min-height: 92px; line-height: 1.45; }
 @media (max-width: 520px) { .inline-row { grid-template-columns: 1fr; } }
 .extra { margin-top: 2px; }
 
-/* Presets */
-.presets { display: grid; gap: 8px; }
-.preset { border: 1px solid var(--line-strong); background: var(--surface); border-radius: var(--r); }
-.preset.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-.preset > button { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 11px; width: 100%; text-align: left; background: none; border: 0; padding: 12px 14px; cursor: pointer; border-radius: var(--r); }
-.preset .dot { grid-row: span 2; margin-top: 3px; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--line-strong); }
-.preset.on .dot { border: 5px solid var(--accent); }
-.preset .name { font-weight: 600; }
-.preset .text { color: var(--muted); font-size: 14px; }
-.preset.on .text { color: var(--ink); }
-.preset .params { display: flex; flex-wrap: wrap; gap: 10px; padding: 0 14px 12px 43px; align-items: end; }
-.preset .params label { display: grid; gap: 4px; font-size: 13px; font-weight: 600; }
-.preset .params input { width: 8.5em; min-height: 40px; padding: 8px 10px; }
-.preset .tools { padding: 0 14px 12px 43px; }
 .linkbtn { background: none; border: 0; padding: 4px 0; color: var(--accent); font-weight: 600; font-size: 13px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
-.preset.custom .area { padding: 0 14px 14px; }
-.preset.disabled > button { cursor: default; opacity: .6; }
 
 /* Tooth chart */
 .chart-card { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r); padding: 10px 8px 4px; }
@@ -213,8 +197,6 @@ const TEMPLATE_B64 = "__TEMPLATE_B64__";
 
 /* ---------------- Schema ---------------- */
 const PA = ["Present", "Absent"], NP = ["Negative", "Positive"];
-const X_PRESET = [{ name: "X", text: "X", note: "Nothing to report" }];
-const NA_PRESET = [{ name: "Not applicable", text: "Not applicable" }];
 const has = (id, o) => (S[id] || []).includes(o);
 
 const STEPS = [
@@ -233,12 +215,10 @@ const STEPS = [
       { t: "fileno", id: "fileNo", label: "File No.", hint: "Format xx/xxxxxx" },
       { t: "text", id: "age", label: "Age", inputmode: "numeric", mono: true } ] },
     { t: "single", id: "sex", label: "Sex", options: ["Male", "Female"] },
-    { t: "preset", id: "medHistory", label: "Medical history – medications", presets: [
-      { name: "Healthy patient", text: "Healthy patient, no allergies. No contraindications to routine endodontic treatment, local anesthesia with vasoconstrictor, or analgesics/NSAIDs." } ] } ] },
+    { t: "textarea", id: "medHistory", label: "Medical history – medications" } ] },
 
   { key: "history", num: "2", title: "History", fields: [
-    { t: "preset", id: "chiefComplaint", label: "Chief complaint", presets: [
-      { name: "Retreatment for prosthetic purposes", text: "Retreatment referred for prosthetic purposes, no specific patient complaint, tooth is asymptomatic." } ] },
+    { t: "textarea", id: "chiefComplaint", label: "Chief complaint" },
     { t: "textarea", id: "dentalHistory", label: "Dental history" },
     { t: "heading", text: "Type of pain" },
     { t: "multi", id: "painOnset", label: "Spontaneous / provoked", options: ["Spontaneous", "Provoked"] },
@@ -248,8 +228,8 @@ const STEPS = [
     { t: "multi", id: "character", label: "Character", options: ["Throbbing", "Continuous", "Sharp", "Nocturnal", "Other"],
       extras: { Other: { id: "characterOther", placeholder: "Other character" } } },
     { t: "single", id: "location", label: "Localized / diffuse", options: ["Localized", "Diffuse"] },
-    { t: "preset", id: "relieving", label: "Factors relieving pain", presets: NA_PRESET },
-    { t: "preset", id: "painMeds", label: "Medications taken during painful episodes", presets: NA_PRESET } ] },
+    { t: "textarea", id: "relieving", label: "Factors relieving pain" },
+    { t: "textarea", id: "painMeds", label: "Medications taken during painful episodes" } ] },
 
   { key: "clinical", num: "3", title: "Clinical Examination", fields: [
     { t: "heading", text: "Extraoral inspection" },
@@ -257,8 +237,8 @@ const STEPS = [
       { id: "eoSymmetry", label: "Facial symmetry", options: PA },
       { id: "eoSinus", label: "Cutaneous sinus tract", options: PA },
       { id: "eoSwelling", label: "Swelling", options: PA } ] },
-    { t: "preset", id: "tissue", label: "Tissue condition", presets: X_PRESET },
-    { t: "preset", id: "eoOther", label: "Other observations", presets: X_PRESET },
+    { t: "textarea", id: "tissue", label: "Tissue condition" },
+    { t: "textarea", id: "eoOther", label: "Other observations" },
     { t: "heading", text: "Intraoral inspection" },
     { t: "rows", rows: [
       { id: "ioSwelling", label: "Swelling / Vestibular obliteration", options: PA },
@@ -295,36 +275,25 @@ const STEPS = [
   { key: "pulpal", num: "5", title: "Pulpal Diagnosis", intro: "AAE 2009 terminology.", fields: [
     { t: "single", id: "pulpal", label: "Pulpal diagnosis", vertical: true, options: ["Normal pulp", "Reversible pulpitis", "Symptomatic irreversible pulpitis", "Asymptomatic irreversible pulpitis", "Pulp necrosis", "Previously initiated therapy", "Previously treated"] } ] },
 
-  { key: "periradicular", num: "6", title: "Periradicular Diagnosis", intro: "AAE 2009 terminology. The final diagnosis is built from both selections.", fields: [
+  { key: "periradicular", num: "6", title: "Periradicular Diagnosis", intro: "AAE 2009 terminology.", fields: [
     { t: "single", id: "periradicular", label: "Periradicular diagnosis", vertical: true, options: ["Normal apical tissues", "Symptomatic apical periodontitis", "Asymptomatic apical periodontitis", "Acute apical abscess", "Chronic apical abscess", "Condensing osteitis"] },
-    { t: "preset", id: "finalDx", label: "Final diagnosis (pulpal + periradicular)", presets: [
-      { name: "From my selections", dynamic: () => finalDiagnosis(), empty: "Select a pulpal and a periradicular diagnosis first." } ] } ] },
+    { t: "textarea", id: "finalDx", label: "Final diagnosis (pulpal + periradicular)" } ] },
 
   { key: "plan", num: "7", title: "Treatment Plan", fields: [
     { t: "single", id: "txPlan", label: "Treatment", vertical: true, options: ["Primary root canal treatment", "Endodontic retreatment", "Primary root canal treatment - vital pulp therapy"] },
     { t: "textarea", id: "txAlternatives", label: "Treatment alternatives" },
     { t: "toggle", id: "consent", label: "Patient consent obtained" },
-    { t: "preset", id: "insists", label: "Specify if the patient insists on retaining the tooth despite an unfavorable prognosis", presets: X_PRESET } ] },
+    { t: "textarea", id: "insists", label: "Specify if the patient insists on retaining the tooth despite an unfavorable prognosis" } ] },
 
   { key: "procedure", num: "8", title: "Clinical Procedure Performed", fields: [
-    { t: "preset", id: "anesthesia", label: "Anesthesia technique and anesthetic agent", presets: [
-      { name: "Buccal infiltration", text: "Buccal infiltration adjacent to the tooth using 4% articaine with 1:100,000 epinephrine (1 cartridge 1.8 mL)." },
-      { name: "IANB", text: "Inferior alveolar nerve block (IANB) using 4% articaine with 1:100,000 epinephrine (1 cartridge 1.8 mL)." },
-      { name: "IANB + supplemental infiltration and intraligamentary", text: "Inferior alveolar nerve block (IANB) using 4% articaine with 1:100,000 epinephrine (1 cartridge 1.8 mL). Supplemental buccal infiltration administered using 4% articaine with 1:100,000 epinephrine (half a cartridge), and the other half distributed in intra-ligamentary injections all around the tooth." } ] },
-    { t: "preset", id: "isolation", label: "Isolation technique (rubber dam and clamp selection)", presets: [
-      { name: "Winged molar clamp + liquid dam", text: "Single tooth isolation with a winged molar clamp #{clamp}. Light-cured liquid dam (TopDam/FGM) applied to prevent microleakage.",
-        params: [{ key: "clamp", label: "Clamp #", placeholder: "e.g. 12A" }] } ] },
+    { t: "textarea", id: "anesthesia", label: "Anesthesia technique and anesthetic agent" },
+    { t: "textarea", id: "isolation", label: "Isolation technique (rubber dam and clamp selection)" },
     { t: "textarea", id: "access", label: "Access cavity preparation (instruments/materials used)" },
     { t: "textarea", id: "negotiation", label: "Canal negotiation and working length determination (file/instrument – apex locator and radiographs)" },
     { t: "textarea", id: "shaping", label: "Instrumentation / canal shaping (manual – rotary / specify the rotary instrument selected)" },
-    { t: "preset", id: "irrigation", label: "Irrigation and intracanal medication", presets: [
-      { name: "NaOCl + sonic activation + EDTA", text: "The canals were irrigated with sodium hypochlorite ({naocl}%) during instrumentation, with sonic activation using Emate Activator (Denco). A final rinse was made with liquid EDTA 17%, followed by a final 3 mL of sodium hypochlorite.",
-        params: [{ key: "naocl", label: "NaOCl %", placeholder: "e.g. 5.25", inputmode: "decimal" }] } ] },
-    { t: "preset", id: "obturation", label: "Obturation technique", presets: [
-      { name: "Warm vertical compaction", text: "The canals were obturated with gutta-percha using the warm vertical compaction technique, with the apical down-pack performed using the Fast Pack Pro (Eighteeth), followed by backfilling with thermoplasticized gutta-percha with a gutta condenser." } ] },
-    { t: "preset", id: "sealer", label: "Sealer", presets: [
-      { name: "Sealite™ Regular", text: "Sealite™ Regular, zinc oxide eugenol based (Acteon)" },
-      { name: "K-Sealer Universal", text: "K-Sealer Universal, zinc oxide eugenol based (Rekita)" } ] },
+    { t: "textarea", id: "irrigation", label: "Irrigation and intracanal medication" },
+    { t: "textarea", id: "obturation", label: "Obturation technique" },
+    { t: "text", id: "sealer", label: "Sealer" },
     { t: "multi", id: "restoration", label: "Restoration", options: ["Temporary restoration", "Permanent restoration"] } ] },
 
   { key: "challenges", num: "9", title: "Challenges – Complications", fields: [
@@ -332,8 +301,7 @@ const STEPS = [
     { t: "textarea", id: "complications", label: "Complications – management" } ] },
 
   { key: "postop", num: "10", title: "Postoperative Instructions", fields: [
-    { t: "preset", id: "painMgmt", label: "Pain management", presets: [
-      { name: "Paracetamol 500 mg, up to 1 week", text: "Paracetamol 500mg was prescribed after treatment in case of sensitivity to touch or pain on chewing up to 1 week after treatment." } ] },
+    { t: "textarea", id: "painMgmt", label: "Pain management" },
     { t: "textarea", id: "followSchedule", label: "Postoperative follow-up schedule" } ] },
 
   { key: "followup", num: "11", title: "Follow-up and Outcomes", fields: [
@@ -358,6 +326,7 @@ function freshState() {
 let S;
 try { S = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); } catch (e) { S = null; }
 if (!S || typeof S !== "object") S = freshState();
+for (const [k, v] of Object.entries(S)) if (v && typeof v === "object" && !Array.isArray(v)) S[k] = v.sel === "custom" ? v.custom || "" : "";
 function save() {
   try {
     localStorage.setItem(DRAFT_KEY, JSON.stringify(S));
@@ -365,25 +334,6 @@ function save() {
   } catch (e) {}
 }
 
-function finalDiagnosis() {
-  const p = S.pulpal, r = S.periradicular;
-  if (!p || !r) return "";
-  const pulpWords = { "Previously treated": "previously treated pulp" };
-  const s = (pulpWords[p] || p.toLowerCase()) + " + " + r.toLowerCase();
-  return s[0].toUpperCase() + s.slice(1);
-}
-function presetValue(field) {
-  const v = S[field.id];
-  if (!v || v.sel == null) return "";
-  if (v.sel === "custom") return (v.custom || "").trim();
-  const p = field.presets[v.sel];
-  if (!p) return "";
-  if (p.dynamic) return p.dynamic();
-  return p.text.replace(/\{(\w+)\}/g, (_, k) => ((v.params || {})[k] || "").trim() || "…");
-}
-const FIELD_BY_ID = {};
-STEPS.forEach(s => s.fields.forEach(f => (f.fields || [f]).forEach(x => x.id && (FIELD_BY_ID[x.id] = x))));
-const pv = id => presetValue(FIELD_BY_ID[id]);
 const txt = id => String(S[id] ?? "").trim();
 const validFileNo = v => /^\d{2}\/\d{6}$/.test(v);
 
@@ -479,52 +429,6 @@ function rowsField(f) {
 function toggleField(f) {
   return h("div", { class: "field" }, h("div", { class: "chips" }, chip(f.label, !!S[f.id], () => { S[f.id] = !S[f.id]; save(); renderStep(); })));
 }
-function presetField(f) {
-  const v = S[f.id] || (S[f.id] = { sel: null, params: {}, custom: "" });
-  v.params = v.params || {};
-  const lid = "l-" + f.id;
-  const list = h("div", { class: "presets", role: "radiogroup", "aria-labelledby": lid });
-  const pick = sel => { v.sel = v.sel === sel ? null : sel; save(); renderStep(); };
-
-  f.presets.forEach((p, i) => {
-    const on = v.sel === i;
-    const shown = p.dynamic ? p.dynamic() : p.text.replace(/\{(\w+)\}/g, (_, k) => (v.params[k] || "").trim() || "__");
-    const disabled = p.dynamic && !shown;
-    const textEl = h("span", { class: "text" }, disabled ? p.empty : (p.note ? p.note + " — writes “" + shown + "”" : shown));
-    const card = h("div", { class: "preset" + (on ? " on" : "") + (disabled ? " disabled" : "") }, [
-      h("button", { type: "button", role: "radio", "aria-checked": on ? "true" : "false", disabled: disabled && !on, onclick: () => pick(i) }, [
-        h("span", { class: "dot", "aria-hidden": "true" }), h("span", { class: "name" }, p.name), textEl ])
-    ]);
-    if (on && p.params) {
-      card.append(h("div", { class: "params" }, p.params.map(pa => {
-        const pid = `f-${f.id}-${pa.key}`;
-        return h("label", { for: pid }, [pa.label, h("input", { type: "text", id: pid, value: v.params[pa.key] || "", placeholder: pa.placeholder, inputmode: pa.inputmode, class: "mono",
-          oninput: e => { v.params[pa.key] = e.target.value; save();
-            textEl.textContent = p.text.replace(/\{(\w+)\}/g, (_, k) => (v.params[k] || "").trim() || "__"); } })]);
-      })));
-    }
-    if (on && !disabled) {
-      card.append(h("div", { class: "tools" }, h("button", { type: "button", class: "linkbtn",
-        onclick: () => { v.custom = presetValue(f); v.sel = "custom"; save(); renderStep(); setTimeout(() => document.getElementById("f-" + f.id + "-custom")?.focus(), 0); } }, "Edit this wording")));
-    }
-    list.append(card);
-  });
-
-  const onC = v.sel === "custom";
-  const custom = h("div", { class: "preset custom" + (onC ? " on" : "") }, [
-    h("button", { type: "button", role: "radio", "aria-checked": onC ? "true" : "false", onclick: () => { pick("custom"); if (!onC) setTimeout(() => document.getElementById("f-" + f.id + "-custom")?.focus(), 0); } }, [
-      h("span", { class: "dot", "aria-hidden": "true" }), h("span", { class: "name" }, "Write my own"), h("span", { class: "text" }, "Type a different answer") ])
-  ]);
-  if (onC) {
-    const t = h("textarea", { id: "f-" + f.id + "-custom", rows: 3, "aria-label": f.label + " (your own text)", oninput: e => { v.custom = e.target.value; save(); autosize(e.target); } });
-    t.value = v.custom || "";
-    requestAnimationFrame(() => autosize(t));
-    custom.append(h("div", { class: "area" }, t));
-  }
-  list.append(custom);
-  return h("div", { class: "field" }, [h("div", { class: "label", id: lid }, f.label), list]);
-}
-
 /* ---------------- Tooth chart (FDI, operator's view: patient's right on the left) ---------------- */
 const TOOTH_NAMES = ["central incisor", "lateral incisor", "canine", "first premolar", "second premolar", "first molar", "second molar", "third molar"];
 const QUADS = { 1: "Upper right", 2: "Upper left", 3: "Lower left", 4: "Lower right" };
@@ -589,7 +493,6 @@ function renderField(f) {
     case "multi": return choiceField(f, true);
     case "rows": return rowsField(f);
     case "toggle": return toggleField(f);
-    case "preset": return presetField(f);
     case "tooth": return toothChart(f);
     case "pair": return h("div", { class: "pair" }, f.fields.map(renderField));
     case "heading": return h("div", { class: "sub-heading" }, f.text);
@@ -609,7 +512,6 @@ function leafFields(step) {
 }
 function answered(f) {
   const v = S[f.id];
-  if (f.t === "preset") return !!presetValue(f);
   if (f.t === "multi") return Array.isArray(v) && v.length > 0;
   if (f.t === "toggle") return true;
   return v != null && String(v).trim() !== "";
@@ -835,10 +737,10 @@ function fillDocument(doc) {
   // 1. Patient information
   F.blanks(F.p("Full Name"), [txt("patientName"), txt("fileNo"), txt("age")]);
   F.pick(F.p("Sex:"), ["Male", "Female"], S.sex);
-  F.lines(F.p("Medical History"), pv("medHistory"));
+  F.lines(F.p("Medical History"), txt("medHistory"));
 
   // 2. History
-  F.lines(F.p("Chief complaint:"), pv("chiefComplaint"));
+  F.lines(F.p("Chief complaint:"), txt("chiefComplaint"));
   F.lines(F.p("Dental history:"), txt("dentalHistory"));
   if (has("painOnset", "Spontaneous")) F.listCheck(F.p("Spontaneous", 0, true));
   const prov = F.p("Provoked:");
@@ -854,8 +756,8 @@ function fillDocument(doc) {
   const loc = F.p("Localized");
   if (S.location === "Localized") F.listCheck(loc);
   if (S.location === "Diffuse") F.box(loc, 0);
-  F.lines(F.p("Factors relieving pain"), pv("relieving"));
-  F.lines(F.p("Medications taken during painful episodes"), pv("painMeds"));
+  F.lines(F.p("Factors relieving pain"), txt("relieving"));
+  F.lines(F.p("Medications taken during painful episodes"), txt("painMeds"));
 
   // 3. Clinical examination
   const rows = [["Facial symmetry", "eoSymmetry"], ["Cutaneous sinus tract", "eoSinus"], ["Swelling:", "eoSwelling"],
@@ -866,8 +768,8 @@ function fillDocument(doc) {
     F.pick(F.p(label), id.startsWith("t") ? NP : PA, S[id]);
   }
   F.pick(F.p("Cold:"), ["Negative", "Positive normal response", "Positive prolonged and increased response"], S.tCold);
-  F.lines(F.p("Tissue condition"), pv("tissue"));
-  F.lines(F.p("Other observations", 0), pv("eoOther"));
+  F.lines(F.p("Tissue condition"), txt("tissue"));
+  F.lines(F.p("Other observations", 0), txt("eoOther"));
 
   // 4. Radiographic examination
   const pa = F.p("Periapical / Number of angulations");
@@ -889,31 +791,31 @@ function fillDocument(doc) {
   // 5–6. Diagnosis
   if (S.pulpal) F.listCheck(F.p(S.pulpal, 0, true));
   if (S.periradicular) F.listCheck(F.p(S.periradicular, 0, true));
-  F.lines(F.p("Final diagnosis"), pv("finalDx"));
+  F.lines(F.p("Final diagnosis"), txt("finalDx"));
 
   // 7. Treatment plan
   if (S.txPlan) F.listCheck(F.p(S.txPlan, 0, true));
   F.lines(F.p("Treatment alternatives:"), txt("txAlternatives"));
   F.append(F.p("Patient consent obtained"), " " + (S.consent ? CHECK : BOX), { font: "MS Gothic" });
-  F.lines(F.p("Specify if the patient insists"), pv("insists"));
+  F.lines(F.p("Specify if the patient insists"), txt("insists"));
 
   // 8. Clinical procedure
-  F.lines(F.p("Anesthesia technique"), pv("anesthesia"));
-  F.lines(F.p("Isolation technique"), pv("isolation"));
+  F.lines(F.p("Anesthesia technique"), txt("anesthesia"));
+  F.lines(F.p("Isolation technique"), txt("isolation"));
   F.lines(F.p("Access cavity preparation"), txt("access"));
   F.lines(F.p("Canal negotiation"), txt("negotiation"));
   F.lines(F.p("Instrumentation / Canal shaping"), txt("shaping"));
-  F.lines(F.p("Irrigation and intracanal"), pv("irrigation"));
-  F.lines(F.p("Obturation technique"), pv("obturation"));
+  F.lines(F.p("Irrigation and intracanal"), txt("irrigation"));
+  F.lines(F.p("Obturation technique"), txt("obturation"));
   const sealer = F.p("Sealer:");
-  if (pv("sealer")) { F.blanks(sealer, [pv("sealer")]); const ind = sealer.getElementsByTagNameNS(WNS, "ind")[0]; ind && ind.removeAttributeNS(WNS, "right"); }
+  if (txt("sealer")) { F.blanks(sealer, [txt("sealer")]); const ind = sealer.getElementsByTagNameNS(WNS, "ind")[0]; ind && ind.removeAttributeNS(WNS, "right"); }
   if (has("restoration", "Temporary restoration")) F.box(F.p("Temporary restoration"), 0);
   if (has("restoration", "Permanent restoration")) F.box(F.p("Permanent restoration"), 0);
 
   // 9–12
   F.lines(F.p("Challenges encountered"), txt("challenges"));
   F.lines(F.p("Complications - Management"), txt("complications"));
-  F.lines(F.p("Pain management"), pv("painMgmt"));
+  F.lines(F.p("Pain management"), txt("painMgmt"));
   F.lines(F.p("Postoperative follow-up schedule"), txt("followSchedule"));
   F.lines(F.p("Healing status"), txt("healing"));
   F.lines(F.p("Future interventions"), txt("future"));
