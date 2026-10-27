@@ -2,7 +2,7 @@
 
 A step-by-step web form that fills the Saint Joseph University endodontic clinical logbook and downloads it as a Word file. Works on phones and computers.
 
-**Use it:** open the GitHub Pages site for this repository (Settings → Pages shows the address).
+**Open the app:** https://amsaleh1998-spec.github.io/Endo-Logbook/
 
 ## What it does
 
