@@ -307,7 +307,7 @@ const STEPS = [
     { t: "textarea", id: "irrigation", label: "Irrigation and intracanal medication" },
     { t: "textarea", id: "obturation", label: "Obturation technique" },
     { t: "text", id: "sealer", label: "Sealer" },
-    { t: "multi", id: "restoration", label: "Restoration", options: ["Temporary restoration", "Permanent restoration"] } ] },
+    { t: "single", id: "restoration", label: "Restoration", options: ["Temporary restoration", "Permanent restoration"] } ] },
 
   { key: "challenges", num: "9", title: "Challenges – Complications", fields: [
     { t: "textarea", id: "challenges", label: "Challenges encountered – management" },
@@ -342,6 +342,7 @@ function freshState() {
 let S;
 try { S = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); } catch (e) { S = null; }
 if (!S || typeof S !== "object") S = freshState();
+if (Array.isArray(S.restoration)) S.restoration = S.restoration[0] || null;
 for (const [k, v] of Object.entries(S)) if (v && typeof v === "object" && !Array.isArray(v)) S[k] = v.sel === "custom" ? v.custom || "" : "";
 function save() {
   try {
@@ -949,8 +950,8 @@ function fillDocument(doc) {
   F.lines(F.p("Obturation technique"), txt("obturation"));
   const sealer = F.p("Sealer:");
   if (txt("sealer")) { F.blanks(sealer, [txt("sealer")]); const ind = sealer.getElementsByTagNameNS(WNS, "ind")[0]; ind && ind.removeAttributeNS(WNS, "right"); }
-  if (has("restoration", "Temporary restoration")) F.box(F.p("Temporary restoration"), 0);
-  if (has("restoration", "Permanent restoration")) F.box(F.p("Permanent restoration"), 0);
+  if (S.restoration === "Temporary restoration") F.box(F.p("Temporary restoration"), 0);
+  if (S.restoration === "Permanent restoration") F.box(F.p("Permanent restoration"), 0);
 
   // 9–12
   F.lines(F.p("Challenges encountered"), txt("challenges"));
