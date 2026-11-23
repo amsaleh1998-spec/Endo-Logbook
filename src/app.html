@@ -55,6 +55,21 @@ button, input, textarea { font: inherit; color: inherit; }
 .spacer { flex: 1; }
 .sections-btn { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .sections-btn:hover { border-color: var(--line-strong); }
+.top-row .sections-btn { white-space: nowrap; }
+@media (max-width: 400px) { .top-row .brand { display: none; } }
+
+/* Saved cases */
+.cases { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.case { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; background: var(--surface); }
+.case.cur { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.case .open { all: unset; cursor: pointer; display: grid; gap: 2px; min-width: 0; }
+.case .open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.case .t { font-weight: 700; }
+.case .m { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.case .badge { font-size: 12px; font-weight: 700; color: var(--accent); }
+.case-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.cases-note { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 70px); z-index: 30; background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; width: max-content; max-width: calc(100% - 32px); text-align: center; }
 .progress { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 3px; }
 .progress button { height: 6px; border: 0; padding: 0; border-radius: 3px; background: var(--line); cursor: pointer; position: relative; }
 .progress button::after { content: ""; position: absolute; inset: -9px 0; }
@@ -175,6 +190,8 @@ textarea { resize: vertical; min-height: 92px; line-height: 1.45; }
     <div class="top-row">
       <div class="brand"><b>Endo</b> Logbook</div>
       <div class="spacer"></div>
+      <button type="button" class="sections-btn" id="save-case">Save</button>
+      <button type="button" class="sections-btn" id="open-cases" aria-haspopup="dialog">Cases</button>
       <button type="button" class="sections-btn" id="open-sections" aria-haspopup="dialog">Sections</button>
     </div>
     <div class="progress" id="progress" aria-label="Sections"></div>
@@ -196,6 +213,20 @@ textarea { resize: vertical; min-height: 92px; line-height: 1.45; }
     <ol id="sheet-list"></ol>
   </div>
 </div>
+
+<div class="sheet" id="cases-sheet" hidden role="dialog" aria-modal="true" aria-labelledby="cases-title">
+  <div class="panel">
+    <h2><span id="cases-title">Your cases</span><button type="button" class="linkbtn" id="close-cases">Close</button></h2>
+    <p class="cases-note" id="cases-note">Cases save automatically in this browser on this device. Tap a case to continue it.</p>
+    <div class="case-actions">
+      <button type="button" class="btn primary" id="cases-save">Save progress</button>
+      <button type="button" class="btn" id="cases-new">Start a new case</button>
+    </div>
+    <ol class="cases" id="cases-list"></ol>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
@@ -337,7 +368,7 @@ const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOff
 function freshState() {
   let st = {};
   try { st = JSON.parse(localStorage.getItem(STUDENT_KEY) || "{}") || {}; } catch (e) {}
-  return { step: 0, student: st.student || "", studentId: st.studentId || "", date: today(), consent: true };
+  return { step: 0, student: st.student || "", studentId: st.studentId || "", date: today(), consent: true, caseId: newCaseId() };
 }
 let S;
 try { S = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); } catch (e) { S = null; }
@@ -349,6 +380,7 @@ function save() {
     localStorage.setItem(DRAFT_KEY, JSON.stringify(S));
     localStorage.setItem(STUDENT_KEY, JSON.stringify({ student: S.student || "", studentId: S.studentId || "" }));
   } catch (e) {}
+  queueCaseSave();
 }
 
 const txt = id => String(S[id] ?? "").trim();
@@ -587,7 +619,7 @@ function reviewScreen() {
   wrap.append(h("div", { class: "note" }, "14. Evaluation Grid stays blank for your instructor to complete."));
   const status = h("div", { class: "status", role: "status" });
   const genBtn = h("button", { type: "button", class: "btn primary", id: "generate", onclick: () => generate(status, genBtn) }, "Download Word file");
-  const newBtn = h("button", { type: "button", class: "btn", id: "new-case", onclick: () => confirmNew(newBtn) }, "Start a new case");
+  const newBtn = h("button", { type: "button", class: "btn", id: "new-case", onclick: startNewCase }, "Save and start a new case");
   wrap.append(h("div", { class: "gen-row" }, [genBtn, newBtn]), status);
   return wrap;
 }
@@ -596,15 +628,17 @@ const IMAGES = {};   // field id -> { blob, w, h, url }
 const IMG_DB = DRAFT_KEY.replace(".draft.v1", ".images");
 function idbOpen() {
   return new Promise((res, rej) => {
-    const r = indexedDB.open(IMG_DB, 1);
-    r.onupgradeneeded = () => r.result.createObjectStore("img");
+    const r = indexedDB.open(IMG_DB, 2);
+    r.onupgradeneeded = () => {
+      for (const name of ["img", "cases"]) if (!r.result.objectStoreNames.contains(name)) r.result.createObjectStore(name);
+    };
     r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
   });
 }
-async function idbRun(mode, fn) {
+async function idbRun(mode, fn, store = "img") {
   const db = await idbOpen();
   return new Promise((res, rej) => {
-    const tx = db.transaction("img", mode); fn(tx.objectStore("img"));
+    const tx = db.transaction(store, mode); fn(tx.objectStore(store));
     tx.oncomplete = () => { db.close(); res(); };
     tx.onerror = tx.onabort = () => { db.close(); rej(tx.error); };
   });
@@ -619,16 +653,18 @@ async function loadImages() {
 function setImage(id, rec, persist) {
   if (IMAGES[id]) URL.revokeObjectURL(IMAGES[id].url);
   IMAGES[id] = { blob: rec.blob, w: rec.w, h: rec.h, url: URL.createObjectURL(rec.blob) };
-  if (persist) idbRun("readwrite", st => st.put({ blob: rec.blob, w: rec.w, h: rec.h }, id)).catch(() => {});
+  if (persist) { idbRun("readwrite", st => st.put({ blob: rec.blob, w: rec.w, h: rec.h }, id)).catch(() => {}); queueCaseSave(); }
 }
 function removeImage(id) {
   if (IMAGES[id]) URL.revokeObjectURL(IMAGES[id].url);
   delete IMAGES[id];
   idbRun("readwrite", st => st.delete(id)).catch(() => {});
+  queueCaseSave();
 }
-function clearImages() {
+function replaceImages(images) {
   for (const id of Object.keys(IMAGES)) { URL.revokeObjectURL(IMAGES[id].url); delete IMAGES[id]; }
-  idbRun("readwrite", st => st.clear()).catch(() => {});
+  for (const [id, rec] of Object.entries(images || {})) setImage(id, rec, false);
+  return idbRun("readwrite", st => { st.clear(); for (const [id, rec] of Object.entries(images || {})) st.put({ blob: rec.blob, w: rec.w, h: rec.h }, id); }).catch(() => {});
 }
 /* Shrink to at most 1600 px on the long side and re-encode as JPEG, so the Word file stays small. */
 async function preparePhoto(file) {
@@ -698,14 +734,120 @@ async function addXrays(zip, doc) {
   zip.file("[Content_Types].xml", types);
 }
 
-function confirmNew(btn) {
-  if (btn.dataset.armed) {
-    const keep = { student: S.student, studentId: S.studentId };
-    S = Object.assign(freshState(), keep); save(); clearImages(); renderStep(true); return;
+/* ---------------- Saved cases: each case is kept in IndexedDB; the open one saves itself as you go ---------------- */
+function newCaseId() { return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+var caseTimer = null;
+function caseSummary() {
+  let done = 0, total = 0, filled = 0;
+  for (const st of STEPS) {
+    if (st.key === "review") continue;
+    for (const f of leafFields(st)) {
+      if (f.t === "toggle") continue;
+      total++;
+      if (answered(f)) { done++; if (st.key !== "case") filled++; }
+    }
   }
-  btn.dataset.armed = "1"; btn.textContent = "Tap again to clear this case";
-  setTimeout(() => { if (btn.isConnected) { delete btn.dataset.armed; btn.textContent = "Start a new case"; } }, 4000);
+  const v = k => String(S[k] ?? "").trim();
+  if (v("caseNo") || v("tooth")) filled++;
+  return { caseNo: v("caseNo"), tooth: v("tooth"), patient: v("patientName"), date: S.date || "", done, total, empty: filled === 0 };
 }
+async function saveCaseNow() {
+  clearTimeout(caseTimer); caseTimer = null;
+  const summary = caseSummary();
+  if (summary.empty) { await idbRun("readwrite", st => st.delete(S.caseId), "cases"); return "empty"; }
+  const images = {};
+  for (const [id, im] of Object.entries(IMAGES)) images[id] = { blob: im.blob, w: im.w, h: im.h };
+  const rec = { id: S.caseId, updated: Date.now(), state: JSON.parse(JSON.stringify(S)), images, summary };
+  await idbRun("readwrite", st => st.put(rec, rec.id), "cases");
+  return "saved";
+}
+function queueCaseSave() { clearTimeout(caseTimer); caseTimer = setTimeout(() => saveCaseNow().catch(() => {}), 700); }
+async function listCases() {
+  const out = [];
+  await idbRun("readonly", st => { st.openCursor().onsuccess = e => { const c = e.target.result; if (c) { out.push(c.value); c.continue(); } }; }, "cases");
+  return out.sort((a, b) => b.updated - a.updated);
+}
+async function getCase(id) {
+  let rec;
+  await idbRun("readonly", st => { st.get(id).onsuccess = e => { rec = e.target.result; }; }, "cases");
+  return rec;
+}
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => { t.hidden = true; }, 2600);
+}
+async function saveProgress() {
+  try { toast((await saveCaseNow()) === "empty" ? "Nothing to save yet" : "Saved on this device"); }
+  catch (e) { toast("Couldn't save: this browser is blocking storage. Use a normal (not private) window."); }
+  if (!casesSheet.hidden) renderCases();
+}
+async function startNewCase() {
+  try { await saveCaseNow(); }
+  catch (e) { toast("Couldn't save this case, so it stays open. Use a normal (not private) window."); return; }
+  const keep = { student: S.student, studentId: S.studentId };
+  S = Object.assign(freshState(), keep);
+  await replaceImages({});
+  save(); renderStep(true); closeCases();
+  toast("Case saved. New case started.");
+}
+async function openCase(id) {
+  if (id === S.caseId) { closeCases(); return; }
+  try {
+    await saveCaseNow();
+    const rec = await getCase(id);
+    if (!rec) { toast("That case could not be found."); renderCases(); return; }
+    S = rec.state;
+    await replaceImages(rec.images);
+    save(); renderStep(true); closeCases();
+    toast("Case opened");
+  } catch (e) { toast("Couldn't open that case in this browser."); }
+}
+async function deleteCase(id, btn) {
+  if (!btn.dataset.armed) {
+    btn.dataset.armed = "1"; btn.textContent = "Tap again to delete";
+    setTimeout(() => { if (btn.isConnected) { delete btn.dataset.armed; btn.textContent = "Delete"; } }, 4000);
+    return;
+  }
+  try { await idbRun("readwrite", st => st.delete(id), "cases"); } catch (e) {}
+  renderCases();
+}
+function savedAgo(t) {
+  const m = Math.round((Date.now() - t) / 60000);
+  if (m < 1) return "saved just now";
+  if (m < 60) return `saved ${m} min ago`;
+  if (m < 60 * 24) return `saved ${Math.round(m / 60)} h ago`;
+  const d = new Date(t);
+  return `saved ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+}
+function caseRow(sum, o) {
+  const title = [sum.caseNo && "Case " + sum.caseNo, sum.tooth && "Tooth " + sum.tooth].filter(Boolean).join(" · ") || "Untitled case";
+  const meta = [sum.patient, sum.date && fmtDate(sum.date), `${sum.done}/${sum.total} answered`, o.when].filter(Boolean).join(" · ");
+  return h("li", { class: "case" + (o.current ? " cur" : "") }, [
+    h("button", { type: "button", class: "open", onclick: o.onOpen }, [h("span", { class: "t" }, title), h("span", { class: "m" }, meta), o.current && h("span", { class: "badge" }, "Open now")]),
+    o.onDelete && h("button", { type: "button", class: "linkbtn", onclick: e => o.onDelete(e.currentTarget) }, "Delete")
+  ]);
+}
+const casesSheet = document.getElementById("cases-sheet");
+async function renderCases() {
+  let others = [];
+  try { others = (await listCases()).filter(r => r.id !== S.caseId); }
+  catch (e) { document.getElementById("cases-note").textContent = "This browser is blocking storage, so cases can't be saved here. Use a normal (not private) window."; }
+  document.getElementById("cases-list").replaceChildren(
+    caseRow(caseSummary(), { current: true, onOpen: closeCases }),
+    ...others.map(r => caseRow(r.summary, { when: savedAgo(r.updated), onOpen: () => openCase(r.id), onDelete: b => deleteCase(r.id, b) })));
+}
+function openCases() { closeSheet(); casesSheet.hidden = false; renderCases(); document.getElementById("close-cases").focus(); }
+function closeCases() { casesSheet.hidden = true; }
+document.getElementById("open-cases").onclick = openCases;
+document.getElementById("close-cases").onclick = closeCases;
+document.getElementById("cases-save").onclick = saveProgress;
+document.getElementById("cases-new").onclick = startNewCase;
+document.getElementById("save-case").onclick = saveProgress;
+casesSheet.addEventListener("click", e => { if (e.target === casesSheet) closeCases(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !casesSheet.hidden) closeCases(); });
+window.addEventListener("pagehide", () => { saveCaseNow().catch(() => {}); });
+if (!S.caseId) { S.caseId = newCaseId(); save(); }
 
 function renderChrome() {
   const prog = document.getElementById("progress");

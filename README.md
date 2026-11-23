@@ -12,6 +12,7 @@ A step-by-step web form that fills the Saint Joseph University endodontic clinic
 - Final diagnosis filled in from the pulpal and periradicular selections (editable).
 - Clinical Case Documentation: choose a photo for each radiograph (preoperative, working length, master cone, postoperative, follow-up); each one goes into its box in the Word table.
 - Fills the original logbook template: chosen boxes become ☒, answers replace the writing lines, and empty fields keep their blank lines. The Evaluation Grid stays blank.
+- Several cases at once: each case saves itself as you work (or tap Save), and the Cases button lists them so you can switch, continue an unfinished one or start a new one.
 - Answers and photos are saved only in your own browser. Nothing is uploaded.
 
 ## Files
