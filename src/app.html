@@ -749,7 +749,7 @@ function caseSummary() {
   }
   const v = k => String(S[k] ?? "").trim();
   if (v("caseNo") || v("tooth")) filled++;
-  return { caseNo: v("caseNo"), tooth: v("tooth"), patient: v("patientName"), date: S.date || "", done, total, empty: filled === 0 };
+  return { caseNo: v("caseNo"), tooth: v("tooth"), patient: v("patientName"), fileNo: v("fileNo"), date: S.date || "", done, total, empty: filled === 0 };
 }
 async function saveCaseNow() {
   clearTimeout(caseTimer); caseTimer = null;
@@ -821,8 +821,9 @@ function savedAgo(t) {
   return `saved ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
 }
 function caseRow(sum, o) {
-  const title = [sum.caseNo && "Case " + sum.caseNo, sum.tooth && "Tooth " + sum.tooth].filter(Boolean).join(" · ") || "Untitled case";
-  const meta = [sum.patient, sum.date && fmtDate(sum.date), `${sum.done}/${sum.total} answered`, o.when].filter(Boolean).join(" · ");
+  const caseTooth = [sum.caseNo && "Case " + sum.caseNo, sum.tooth && "Tooth " + sum.tooth].filter(Boolean).join(" · ");
+  const title = sum.patient || caseTooth || "Untitled case";
+  const meta = [sum.fileNo && "File " + sum.fileNo, sum.patient && caseTooth, sum.date && fmtDate(sum.date), `${sum.done}/${sum.total} answered`, o.when].filter(Boolean).join(" · ");
   return h("li", { class: "case" + (o.current ? " cur" : "") }, [
     h("button", { type: "button", class: "open", onclick: o.onOpen }, [h("span", { class: "t" }, title), h("span", { class: "m" }, meta), o.current && h("span", { class: "badge" }, "Open now")]),
     o.onDelete && h("button", { type: "button", class: "linkbtn", onclick: e => o.onDelete(e.currentTarget) }, "Delete")
@@ -835,7 +836,7 @@ async function renderCases() {
   catch (e) { document.getElementById("cases-note").textContent = "This browser is blocking storage, so cases can't be saved here. Use a normal (not private) window."; }
   document.getElementById("cases-list").replaceChildren(
     caseRow(caseSummary(), { current: true, onOpen: closeCases }),
-    ...others.map(r => caseRow(r.summary, { when: savedAgo(r.updated), onOpen: () => openCase(r.id), onDelete: b => deleteCase(r.id, b) })));
+    ...others.map(r => caseRow({ ...r.summary, fileNo: r.summary.fileNo ?? String((r.state || {}).fileNo || "").trim() }, { when: savedAgo(r.updated), onOpen: () => openCase(r.id), onDelete: b => deleteCase(r.id, b) })));
 }
 function openCases() { closeSheet(); casesSheet.hidden = false; renderCases(); document.getElementById("close-cases").focus(); }
 function closeCases() { casesSheet.hidden = true; }
